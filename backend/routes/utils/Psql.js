@@ -27,7 +27,6 @@ const connection = () => {
             if (err) {
                 reject(err);
             }
-            console.log(`Connected to PostgreSQL database: processID ${client.processID}`);
             const query = (sql, binding) => {
                 return new Promise((resolve, reject) => {
                     client.query(sql, binding, (err, result) => {
