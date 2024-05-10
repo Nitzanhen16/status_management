@@ -69,14 +69,14 @@ router.post('/add_transition', async (req, res, next) => {
 
 router.post('/del_status', async (req, res, next) => {
     try {
-        const status_id = req.body.status_id;
+        const status_name = req.body.name;
 
-        if (!status_id) {
+        if (!status_name) {
             throw {status: 422, message: "Unprocessable Entity: status ID is required"};
         }
         await DButils.execQuery(`DELETE
                                  from statuses
-                                 WHERE status_id = '${status_id}'`);
+                                 WHERE name = '${status_name}'`);
         // res.status(200).send({ message: "status deleted successfully", success: true });
         let details = await getCurrectStatus()
         res.status(200).send(details);
@@ -87,13 +87,13 @@ router.post('/del_status', async (req, res, next) => {
 
 router.post('/del_transition', async (req, res, next) => {
     try {
-        const trans_id = req.body.trans_id;
-        if (!trans_id) {
+        const trans_name = req.body.name;
+        if (!trans_name) {
             throw {status: 422, message: "Unprocessable Entity: status ID is required"};
         }
         await DButils.execQuery(`DELETE
                                  from transitions
-                                 WHERE trans_id = '${trans_id}'`);
+                                 WHERE name = '${trans_name}'`);
         // res.status(200).send({ message: "transition deleted successfully", success: true });
         let details = await getCurrectStatus()
         res.status(200).send(details);
@@ -106,14 +106,11 @@ router.post('/reset', async (req, res, next) => {
     try {
         await DButils.execQuery('DELETE from statuses');
         await DButils.execQuery('DELETE from transitions');
-        // res.status(200).send({ message: "reset successfully", success: true });
-        let details = await getCurrectStatus()
-        res.status(200).send(details);
+        res.status(200).send();
     } catch (error) {
         next(error);
     }
 });
-
 
 async function getCurrectStatus() {
     // Retrive all information from tables
@@ -121,9 +118,6 @@ async function getCurrectStatus() {
     let transitions = await DButils.execQuery('SELECT * from transitions order by trans_id');
     status_list = statuses.rows
     transition_list = transitions.rows
-
-    console.log(status_list)
-    console.log(transition_list)
 
     // Update [INIT] status
     const minId = Math.min(...status_list.map(obj => obj.status_id)); // Get the minimum id
@@ -137,25 +131,20 @@ async function getCurrectStatus() {
     // Update [ORPHAN] statuses
     // Find all reachable statuses from the initial status
     const reachableStatuses = new Set([minId]); // Use a Set for efficient lookups
-    console.log(reachableStatuses)
     // Sort transitions by from_id for efficient processing
     transition_list.sort((a, b) => a.from_id - b.from_id);
-    console.log(transition_list)
     // Loop through transitions and update reachable statuses
     for (const transition of transition_list) {
         if (reachableStatuses.has(transition.from_id)) {
             reachableStatuses.add(transition.to_id);
         }
     }
-    console.log(reachableStatuses)
     status_list.forEach(status => status.orphan = ![...reachableStatuses].includes(status.status_id))
-
 
     // return all details
     let details = {
         "statuses": status_list, "transitions": transition_list,
     }
-    console.log(details)
     return details
 }
 
